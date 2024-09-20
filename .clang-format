@@ -1,0 +1,13 @@
+BasedOnStyle: Chromium
+BreakBeforeBinaryOperators: All
+AlignOperands: DontAlign
+AlignAfterOpenBracket: BlockIndent
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterControlStatement: MultiLine
+BinPackArguments: false
+UseTab: Always
+ContinuationIndentWidth: 2
+IndentWidth: 2
+TabWidth: 2
+ColumnLimit: 60
