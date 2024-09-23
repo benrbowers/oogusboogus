@@ -9,8 +9,8 @@ const Vector2i tile_size = (Vector2i){TILE_SIZE, TILE_SIZE};
 const Vector2 tile_sizef = (Vector2){TILE_SIZE, TILE_SIZE};
 
 // Includes
-#include "sprite.c"
 #include "units.c"
+#include "ui.c"
 #include "entity.c"
 #include "load.c"
 #include "draw.c"
@@ -33,22 +33,16 @@ int entry(int argc, char** argv) {
 
 	printf(
 		"Player sprite size: %d x %d\n",
-		sprites[SPRITE_player]->width,
-		sprites[SPRITE_player]->height
+		ent_sprites[ENT_player]->width,
+		ent_sprites[ENT_player]->height
 	);
 
 	Entity* berry_stalk = entity_create();
-	setup_entity(
-		berry_stalk,
-		ENT_berry_stalk,
-		sprites[SPRITE_berry_stalk]
-	);
+	setup_entity(berry_stalk, ENT_berry_stalk);
 
 	for (int i = 0; i < 3; i++) {
 		Entity* crystal = entity_create();
-		setup_entity(
-			crystal, ENT_crystal, sprites[SPRITE_energy_crystal]
-		);
+		setup_entity(crystal, ENT_crystal);
 	}
 
 	Entity* player = entity_create();

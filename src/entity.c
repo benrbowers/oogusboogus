@@ -4,8 +4,16 @@ typedef enum EntityType {
 	ENT_crystal = 2,
 	ENT_crystal_drop = 3,
 	ENT_berry_stalk = 4,
-	ENT_berry_drop = 5
+	ENT_berry_drop = 5,
+	ENT_TYPE_MAX = 8
 } EntityType;
+Gfx_Image* ent_sprites[ENT_TYPE_MAX];
+
+typedef enum ItemType {
+	ITEM_nil = 0,
+	ITEM_crystal = 1,
+	ITEM_berry = 2
+} ItemType;
 
 typedef struct Entity {
 	bool is_valid;
@@ -18,6 +26,7 @@ typedef struct Entity {
 	Gfx_Image* sprite;
 	Vector4 color;
 	int health;
+	ItemType item;
 } Entity;
 
 #define MAX_ENTITIES 1024
@@ -58,7 +67,7 @@ void setup_player(Entity* player) {
 	player->is_valid = true;
 	player->type = ENT_player;
 	player->tile_size = v2i(1, 1);
-	player->sprite = sprites[SPRITE_player];
+	player->sprite = ent_sprites[ENT_player];
 	player->color = COLOR_WHITE;
 	player->size
 		= v2(player->sprite->width, player->sprite->height);
@@ -67,11 +76,7 @@ void setup_player(Entity* player) {
 	player->health = 100;
 }
 
-void setup_entity(
-	Entity* ent,
-	EntityType type,
-	Gfx_Image* sprite
-) {
+void setup_entity(Entity* ent, EntityType type) {
 	int width = WINDOW_WIDTH * SCALE / TILE_SIZE;
 	int height = WINDOW_HEIGHT * SCALE / TILE_SIZE;
 	int x = get_random_int_in_range(
@@ -85,9 +90,9 @@ void setup_entity(
 	ent->tile_size = v2i(2, 2);
 	ent->is_valid = true;
 	ent->type = type;
-	ent->sprite = sprite;
+	ent->sprite = ent_sprites[type];
 	ent->color = COLOR_WHITE;
-	ent->size = v2(sprite->width, sprite->height);
+	ent->size = v2(ent->sprite->width, ent->sprite->height);
 	ent->pos = v2_add(
 		tile_to_world_pos(ent->tile_pos),
 		v2_mul(v2(ent->tile_size.x / 2.0f, 0.33f), tile_sizef)
