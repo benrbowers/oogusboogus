@@ -5,21 +5,15 @@
 #define TILE_SIZE 12
 #define COLOR_MOSTLY_RED ((Vector4){1.0, 0.1, 0.1, 1.0})
 
+const Vector2i tile_size = (Vector2i){TILE_SIZE, TILE_SIZE};
+const Vector2 tile_sizef = (Vector2){TILE_SIZE, TILE_SIZE};
+
 // Includes
 #include "sprite.c"
+#include "units.c"
 #include "entity.c"
 #include "load.c"
-#include "units.c"
 #include "draw.c"
-
-typedef struct World {
-	Entity entities[MAX_ENTITIES];
-} World;
-
-World* world = NULL;
-
-Vector2i tile_size = (Vector2i){TILE_SIZE, TILE_SIZE};
-Vector2 tile_sizef = (Vector2){TILE_SIZE, TILE_SIZE};
 
 int entry(int argc, char** argv) {
 	// This is how we (optionally) configure the window.

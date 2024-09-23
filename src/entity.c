@@ -22,6 +22,12 @@ typedef struct Entity {
 
 #define MAX_ENTITIES 1024
 
+typedef struct World {
+	Entity entities[MAX_ENTITIES];
+} World;
+
+World* world = NULL;
+
 Entity* entity_create() {
 	Entity* entity_found = NULL;
 
