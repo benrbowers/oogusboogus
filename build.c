@@ -57,4 +57,4 @@ typedef struct Context_Extra {
 // #include "oogabooga/examples/sanity_tests.c"
 
 // Greatest game ever made
-#include "entry_spacegame.c"
+#include "src/entry_spacegame.c"

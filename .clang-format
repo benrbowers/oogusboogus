@@ -1,4 +1,6 @@
 BasedOnStyle: Chromium
+IndentPPDirectives: None
+SortIncludes: Never
 BreakBeforeBinaryOperators: All
 AlignOperands: DontAlign
 AlignAfterOpenBracket: BlockIndent
