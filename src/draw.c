@@ -24,31 +24,30 @@ void draw_tile_selector(Entity* ent, float64 elapsed_time) {
 		= v2_mul(v2i_to_v2(ent->tile_size), tile_sizef);
 	size = v2_add(size, v2(offset, offset));
 
-	float spr_width
-		= ui_sprites[SPRITE_tile_selector_tl]->width;
+	float spr_width = ui_sprites[UI_tile_selector_tl]->width;
 	Vector2 spr_size = v2(spr_width, spr_width);
 	size = v2_sub(size, spr_size);
 
 	draw_image(
-		ui_sprites[SPRITE_tile_selector_tl],
+		ui_sprites[UI_tile_selector_tl],
 		v2(pos.x, pos.y + size.y),
 		spr_size,
 		COLOR_WHITE
 	);
 	draw_image(
-		ui_sprites[SPRITE_tile_selector_tr],
+		ui_sprites[UI_tile_selector_tr],
 		v2_add(pos, size),
 		spr_size,
 		COLOR_WHITE
 	);
 	draw_image(
-		ui_sprites[SPRITE_tile_selector_bl],
+		ui_sprites[UI_tile_selector_bl],
 		pos,
 		spr_size,
 		COLOR_WHITE
 	);
 	draw_image(
-		ui_sprites[SPRITE_tile_selector_br],
+		ui_sprites[UI_tile_selector_br],
 		v2(pos.x + size.x, pos.y),
 		spr_size,
 		COLOR_WHITE
