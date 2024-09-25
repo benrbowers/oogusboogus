@@ -1,32 +1,33 @@
 typedef enum EntityType {
-	ENT_nil = 0,
-	ENT_player = 1,
-	ENT_crystal = 2,
-	ENT_crystal_drop = 3,
-	ENT_berry_stalk = 4,
-	ENT_berry_drop = 5,
-	ENT_TYPE_MAX = 8
+	ENT_nil,
+	ENT_player,
+	ENT_crystal,
+	ENT_crystal_drop,
+	ENT_berry_stalk,
+	ENT_berry_drop,
+	ENT_TYPE_MAX
 } EntityType;
 Gfx_Image* ent_sprites[ENT_TYPE_MAX];
 
-typedef enum ItemType {
-	ITEM_nil = 0,
-	ITEM_crystal = 1,
-	ITEM_berry = 2
-} ItemType;
-
 typedef struct Entity {
 	bool is_valid;
+	bool is_pickup;
+	bool is_destroyable;
 	EntityType type;
 	Vector2i tile_pos;
 	Vector2i tile_size;
+	Range2f tile_rect;
 	Vector2 pos;
 	Vector2 size;
 	Range2f rect;
+	Vector2 offset;
 	Gfx_Image* sprite;
 	Vector4 color;
 	int health;
-	ItemType item;
+	EntityType drop_type;
+	int drop_count;
+	float64 spawned_at;
+	float64 died_at;
 } Entity;
 
 #define MAX_ENTITIES 1024
@@ -37,7 +38,7 @@ typedef struct World {
 
 World* world = NULL;
 
-Entity* entity_create() {
+Entity* entity_allocate() {
 	Entity* entity_found = NULL;
 
 	for (int i = 0; i < MAX_ENTITIES; i++) {
@@ -63,6 +64,32 @@ Range2f entity_get_rect(Entity* ent) {
 	);
 }
 
+Range2f entity_get_tile_rect(Entity* ent) {
+	Vector2 min = tile_to_world_pos(ent->tile_pos);
+	Vector2 max = v2_add(
+		min, v2i_to_v2(v2i_mul(ent->tile_size, tile_size))
+	);
+
+	return range2f(min, max);
+}
+
+void entity_move_tile(Entity* ent, Vector2i tile_pos) {
+	ent->tile_pos = tile_pos;
+	ent->pos = v2_add(
+		tile_to_world_pos(ent->tile_pos),
+		v2_mul(v2(ent->tile_size.x / 2.0f, 0.33f), tile_sizef)
+	);
+	ent->rect = entity_get_rect(ent);
+	ent->tile_rect = entity_get_tile_rect(ent);
+}
+
+void entity_move_pos(Entity* ent, Vector2 pos) {
+	ent->pos = pos;
+	ent->tile_pos = world_to_tile_pos(ent->pos);
+	ent->rect = entity_get_rect(ent);
+	ent->tile_rect = entity_get_tile_rect(ent);
+}
+
 void setup_player(Entity* player) {
 	player->is_valid = true;
 	player->type = ENT_player;
@@ -77,26 +104,94 @@ void setup_player(Entity* player) {
 }
 
 void setup_entity(Entity* ent, EntityType type) {
-	int width = WINDOW_WIDTH * SCALE / TILE_SIZE;
-	int height = WINDOW_HEIGHT * SCALE / TILE_SIZE;
-	int x = get_random_int_in_range(
-		width / -2, (width / 2) - ent->tile_size.x
-	);
-	int y = get_random_int_in_range(
-		height / -2, (height / 2) - ent->tile_size.y
-	);
-
-	ent->tile_pos = v2i(x, y);
-	ent->tile_size = v2i(2, 2);
 	ent->is_valid = true;
 	ent->type = type;
 	ent->sprite = ent_sprites[type];
 	ent->color = COLOR_WHITE;
 	ent->size = v2(ent->sprite->width, ent->sprite->height);
-	ent->pos = v2_add(
-		tile_to_world_pos(ent->tile_pos),
-		v2_mul(v2(ent->tile_size.x / 2.0f, 0.33f), tile_sizef)
-	);
-	ent->rect = entity_get_rect(ent);
-	ent->health = 5;
+	ent->spawned_at = frame_now;
+
+	switch (type) {
+		case ENT_crystal:
+			ent->tile_size = v2i(2, 2);
+			ent->drop_type = ENT_crystal_drop;
+			ent->drop_count = 3;
+			ent->health = 3;
+			break;
+		case ENT_berry_stalk:
+			ent->tile_size = v2i(2, 2);
+			ent->drop_type = ENT_berry_drop;
+			ent->drop_count = 2;
+			ent->health = 10;
+			break;
+		default:
+			ent->tile_size = v2i(1, 1);
+			ent->drop_type = ENT_nil;
+			ent->drop_count = 0;
+			ent->health = 1;
+			break;
+	}
+}
+
+Entity* create_player() {
+	Entity* player = entity_allocate();
+	setup_player(player);
+
+	return player;
+}
+
+Entity* create_entity(EntityType type) {
+	Entity* ent = entity_allocate();
+	setup_entity(ent, type);
+
+	return ent;
+}
+
+Entity*
+create_tile_entity(EntityType type, Vector2i tile_pos) {
+	Entity* ent = create_entity(type);
+	entity_move_tile(ent, tile_pos);
+
+	return ent;
+}
+
+Entity* create_free_entity(EntityType type, Vector2 pos) {
+	Entity* ent = create_entity(type);
+	entity_move_pos(ent, pos);
+
+	return ent;
+}
+
+Entity* create_destroyable_entity(EntityType type) {
+	Entity* ent = create_entity(type);
+	ent->is_destroyable = true;
+
+	return ent;
+}
+
+Entity* create_destroyable_tile_entity(
+	EntityType type,
+	Vector2i tile_pos
+) {
+	Entity* ent = create_destroyable_entity(type);
+	entity_move_tile(ent, tile_pos);
+
+	return ent;
+}
+
+Entity* create_destroyable_free_entity(
+	EntityType type,
+	Vector2 pos
+) {
+	Entity* ent = create_destroyable_entity(type);
+	entity_move_pos(ent, pos);
+
+	return ent;
+}
+
+Entity* create_pickup(EntityType type, Vector2 pos) {
+	Entity* ent = create_free_entity(type, pos);
+	ent->is_pickup = true;
+
+	return ent;
 }

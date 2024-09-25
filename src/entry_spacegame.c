@@ -7,6 +7,7 @@
 
 const Vector2i tile_size = (Vector2i){TILE_SIZE, TILE_SIZE};
 const Vector2 tile_sizef = (Vector2){TILE_SIZE, TILE_SIZE};
+float64 frame_now = 0.0;
 
 // Includes
 #include "units.c"
@@ -37,25 +38,36 @@ int entry(int argc, char** argv) {
 		ent_sprites[ENT_player]->height
 	);
 
-	Entity* berry_stalk = entity_create();
-	setup_entity(berry_stalk, ENT_berry_stalk);
+	// Init draw_frame so camera_xform can be used for
+	// screen_to_world_pos
+	gfx_update();
+	draw_frame.camera_xform = m4_identity();
+	draw_frame.camera_xform = m4_mul(
+		draw_frame.camera_xform,
+		m4_make_scale(v3(SCALE, SCALE, 1.0))
+	);
+
+	// Make sure player is the first entity
+	Entity* player = create_player();
+
+	Entity* berry_stalk = create_destroyable_tile_entity(
+		ENT_berry_stalk, get_random_tile_in_screen()
+	);
 
 	for (int i = 0; i < 3; i++) {
-		Entity* crystal = entity_create();
-		setup_entity(crystal, ENT_crystal);
+		create_destroyable_tile_entity(
+			ENT_crystal, get_random_tile_in_screen()
+		);
 	}
 
-	Entity* player = entity_create();
-	setup_player(player);
-
-	Vector4 tile_color = v4(1, 1, 1, 0.2);
+	Vector4 grid_color = v4(1, 1, 1, 0.1);
 
 	Vector2 camera_pos = v2(0, 0);
 
 	int frame_count = 0;
 	float64 frame_timer = 0.0;
 
-	float64 last_time = 0.0;
+	float64 last_time = os_get_elapsed_seconds();
 
 	Vector2 mouse_pos = v2(0, 0);
 	bool user_is_hovering_entity = false;
@@ -67,9 +79,9 @@ int entry(int argc, char** argv) {
 	while (!window.should_close) {
 		reset_temporary_storage();
 
-		float64 now = os_get_elapsed_seconds();
-		float64 delta_time = now - last_time;
-		last_time = now;
+		frame_now = os_get_elapsed_seconds();
+		float64 delta_time = frame_now - last_time;
+		last_time = frame_now;
 
 		os_update();
 
@@ -138,27 +150,29 @@ int entry(int argc, char** argv) {
 					draw_rect(
 						v2i_to_v2(v2i_mul(v2i(x, y), tile_size)),
 						tile_sizef,
-						tile_color
+						grid_color
 					);
 				}
 			}
 		}
 
-		mouse_pos = screen_to_world();
+		mouse_pos = mouse_world_pos();
 		user_is_hovering_entity = false;
 
 		// Check for hover
-		for (int i = MAX_ENTITIES - 1; i >= 0; i--) {
+		for (int i = 0; i < MAX_ENTITIES; i++) {
 			Entity* entity = &world->entities[i];
 
-			if (entity->is_valid) {
+			if (entity->is_valid && entity->is_destroyable) {
+				if (entity->is_pickup)
+					continue;
 				if (entity->type == ENT_player)
 					continue;
 
 				if (range2f_contains(entity->rect, mouse_pos)) {
 					if (entity != hovered_entity) {
 						hovered_entity = entity;
-						hover_start = now;
+						hover_start = frame_now;
 					}
 
 					user_is_hovering_entity = true;
@@ -168,15 +182,21 @@ int entry(int argc, char** argv) {
 		}
 
 		if (!user_is_hovering_entity) {
-			if (hovered_entity != NULL) {
+			if (hovered_entity) {
 				hovered_entity = NULL;
 			}
+		}
+
+		if (hovered_entity) {
+			draw_tile_selector(
+				hovered_entity, frame_now - hover_start
+			);
 		}
 
 		if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) {
 			consume_key_just_pressed(MOUSE_BUTTON_LEFT);
 
-			if (hovered_entity != NULL) {
+			if (hovered_entity) {
 				hovered_entity->health -= 1;
 				hovered_entity->color = COLOR_MOSTLY_RED;
 			}
@@ -185,7 +205,7 @@ int entry(int argc, char** argv) {
 		if (is_key_just_released(MOUSE_BUTTON_LEFT)) {
 			consume_key_just_released(MOUSE_BUTTON_LEFT);
 
-			if (hovered_entity != NULL) {
+			if (hovered_entity) {
 				hovered_entity->color = COLOR_WHITE;
 			}
 		}
@@ -199,21 +219,47 @@ int entry(int argc, char** argv) {
 					hovered_entity = NULL;
 				}
 
+				if (entity->drop_type) {
+					for (int j = 0; j < entity->drop_count; j++) {
+						create_pickup(
+							entity->drop_type,
+							get_random_pos_in_range(entity->tile_rect)
+						);
+					}
+				}
+
 				entity_destroy(entity);
 			}
 		}
 
-		if (hovered_entity != NULL) {
-			draw_tile_selector(hovered_entity, now - hover_start);
+		// Animate pickups as "floating"
+		for (int i = 0; i < MAX_ENTITIES; i++) {
+			Entity* entity = &world->entities[i];
+
+			// Magnitude based on sprite height
+			if (entity->is_valid && entity->is_pickup) {
+				entity->offset = v2(
+					0.0,
+					(entity->size.y + 2.0) / 3.0
+						* sin(
+							5.0
+							* (frame_now - entity->spawned_at - (i * 0.2))
+						)
+				);
+			}
 		}
 
-		for (int i = 0; i < MAX_ENTITIES; i++) {
+		// Draw entities
+		for (int i = 1; i < MAX_ENTITIES; i++) {
 			Entity* entity = &world->entities[i];
 
 			if (entity->is_valid) {
 				draw(entity);
 			}
 		}
+
+		// Draw player last
+		draw(player);
 
 		frame_count++;
 		frame_timer += delta_time;

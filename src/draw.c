@@ -4,7 +4,10 @@ void draw(Entity* ent) {
 
 	draw_image(
 		ent->sprite,
-		v2(ent->pos.x - (ent->size.x / 2), ent->pos.y),
+		v2_add(
+			v2(ent->pos.x - (ent->size.x / 2), ent->pos.y),
+			ent->offset
+		),
 		ent->size,
 		ent->color
 	);

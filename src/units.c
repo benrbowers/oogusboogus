@@ -31,17 +31,15 @@ void animate_v2_to_target(
 	);
 }
 
-Vector2 screen_to_world() {
-	float mouse_x = input_frame.mouse_x;
-	float mouse_y = input_frame.mouse_y;
+Vector2 screen_to_world_pos(Vector2 screen_pos) {
 	Matrix4 proj = draw_frame.projection;
 	Matrix4 xform = draw_frame.camera_xform;
-	float window_w = window.width;
-	float window_h = window.height;
 
 	// Normalize the mouse coordinates
-	float unit_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
-	float unit_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
+	float unit_x
+		= (screen_pos.x / (window.width * 0.5f)) - 1.0f;
+	float unit_y
+		= (screen_pos.y / (window.height * 0.5f)) - 1.0f;
 
 	// Transform to world coordinates
 	Vector4 world_pos = v4(unit_x, unit_y, 0, 1);
@@ -51,6 +49,30 @@ Vector2 screen_to_world() {
 
 	// Return as 2D vector
 	return (Vector2){world_pos.x, world_pos.y};
+}
+
+Vector2 mouse_world_pos() {
+	return screen_to_world_pos(
+		v2(input_frame.mouse_x, input_frame.mouse_y)
+	);
+}
+
+Vector2 screen_min_world_pos() {
+	return screen_to_world_pos(v2(0, 0));
+}
+
+Vector2 screen_max_world_pos() {
+	int x = window.width;
+	int y = window.height;
+
+	return screen_to_world_pos(v2(x, y));
+}
+
+Range2f screen_world_rect() {
+	Vector2 min = screen_min_world_pos();
+	Vector2 max = screen_max_world_pos();
+
+	return range2f(min, max);
 }
 
 int world_to_tile_unit(float world_unit) {
@@ -71,4 +93,33 @@ Vector2 tile_to_world_pos(Vector2i tile_pos) {
 		tile_to_world_unit(tile_pos.x),
 		tile_to_world_unit(tile_pos.y)
 	);
+}
+
+Vector2 get_random_pos_in_range(Range2f range) {
+	float x
+		= get_random_float32_in_range(range.min.x, range.max.x);
+	float y
+		= get_random_float32_in_range(range.min.y, range.max.y);
+
+	return v2(x, y);
+}
+
+Vector2i get_random_tile_in_range(Range2i range) {
+	int x = get_random_int_in_range(range.min.x, range.max.x);
+	int y = get_random_int_in_range(range.min.y, range.max.y);
+
+	return v2i(x, y);
+}
+
+Vector2 get_random_pos_in_screen() {
+	return get_random_pos_in_range(screen_world_rect());
+}
+
+Vector2i get_random_tile_in_screen() {
+	Range2i range = range2i(
+		world_to_tile_pos(screen_min_world_pos()),
+		world_to_tile_pos(screen_max_world_pos())
+	);
+
+	return get_random_tile_in_range(range);
 }
